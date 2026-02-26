@@ -150,11 +150,11 @@ export default function App() {
               <a href="#about" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">재단소개</a>
               <a href="#projects" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">주요사업</a>
               <a href="#gallery" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">활동사진</a>
-              <a href="#volunteer" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">자원봉사</a>
-              <a href="#donate" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">후원안내</a>
-              <button className="bg-green-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-green-700 transition-all shadow-sm hover:shadow-md">
+              <a href="#participate" onClick={() => setActiveFormTab('volunteer')} className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">자원봉사</a>
+              <a href="#participate" onClick={() => setActiveFormTab('donate')} className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">후원안내</a>
+              <a href="#participate" onClick={() => setActiveFormTab('donate')} className="bg-green-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-green-700 transition-all shadow-sm hover:shadow-md inline-block text-center">
                 후원하기
-              </button>
+              </a>
               
               {/* Admin Controls */}
               <div className="pl-4 border-l border-gray-200 flex items-center gap-3">
@@ -189,11 +189,11 @@ export default function App() {
             <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">재단소개</a>
             <a href="#projects" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">주요사업</a>
             <a href="#gallery" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">활동사진</a>
-            <a href="#volunteer" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">자원봉사</a>
-            <a href="#donate" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">후원안내</a>
-            <button className="bg-green-600 text-white p-4 rounded-xl text-lg font-semibold mt-4">
+            <a href="#participate" onClick={() => { setMobileMenuOpen(false); setActiveFormTab('volunteer'); }} className="text-lg font-medium p-4 border-b">자원봉사</a>
+            <a href="#participate" onClick={() => { setMobileMenuOpen(false); setActiveFormTab('donate'); }} className="text-lg font-medium p-4 border-b">후원안내</a>
+            <a href="#participate" onClick={() => { setMobileMenuOpen(false); setActiveFormTab('donate'); }} className="bg-green-600 text-white p-4 rounded-xl text-lg font-semibold mt-4 text-center block">
               후원하기
-            </button>
+            </a>
             <div className="pt-4 flex justify-center">
               {isAdmin ? (
                 <div className="flex gap-4">
@@ -242,7 +242,7 @@ export default function App() {
               <a href="#projects" className="inline-flex justify-center items-center px-8 py-4 text-base font-semibold rounded-full text-white bg-gray-900 hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl">
                 사업 둘러보기
               </a>
-              <a href="#volunteer" className="inline-flex justify-center items-center px-8 py-4 text-base font-semibold rounded-full text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md">
+              <a href="#participate" onClick={() => setActiveFormTab('volunteer')} className="inline-flex justify-center items-center px-8 py-4 text-base font-semibold rounded-full text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md">
                 함께하기 <ArrowRight className="ml-2 w-4 h-4" />
               </a>
             </div>
@@ -356,7 +356,7 @@ export default function App() {
       </section>
 
       {/* Form Section */}
-      <section id="volunteer" className="py-24 bg-gray-50 relative overflow-hidden">
+      <section id="participate" className="py-24 bg-gray-50 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-green-50 rounded-full blur-3xl opacity-50"></div>
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-blue-50 rounded-full blur-3xl opacity-50"></div>
         
