@@ -147,7 +147,7 @@ export default function App() {
             <Logo url={siteData.logoUrl} name={siteData.companyInfo.name} />
             
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#about" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">재단소개</a>
+              <a href="#top" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">재단소개</a>
               <a href="#projects" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">주요사업</a>
               <a href="#gallery" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">활동사진</a>
               <a href="#participate" onClick={() => setActiveFormTab('volunteer')} className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">자원봉사</a>
@@ -186,7 +186,7 @@ export default function App() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-20 px-4 md:hidden">
           <div className="flex flex-col space-y-4">
-            <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">재단소개</a>
+            <a href="#top" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">재단소개</a>
             <a href="#projects" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">주요사업</a>
             <a href="#gallery" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium p-4 border-b">활동사진</a>
             <a href="#participate" onClick={() => { setMobileMenuOpen(false); setActiveFormTab('volunteer'); }} className="text-lg font-medium p-4 border-b">자원봉사</a>
@@ -215,7 +215,7 @@ export default function App() {
       )}
 
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-green-50 to-gray-100">
+      <section id="top" className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-green-50 to-gray-100">
         {/* Decorative background elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-green-200/30 blur-3xl"></div>
@@ -235,9 +235,12 @@ export default function App() {
               다하는 마음 <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">더 밝은 내일</span>
             </h1>
-            <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-gray-700 font-medium leading-relaxed">
-              부처님의 자비 사상을 바탕으로, 소외된 이웃과 함께하며 <br className="hidden md:block"/>건강하고 행복한 지역사회 공동체를 만들어갑니다.
-            </p>
+            <div className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-700 font-medium leading-relaxed space-y-4">
+              <p className="font-bold text-gray-900">"자비 희생의 실천으로 모두가 행복한 부산을 만듭니다."</p>
+              <p className="text-base md:text-lg">
+                사회복지법인 대한불교천태종복지재단 부산지부는 부처님의 자비사상을 바탕으로 소외된 이웃이 없는 따뜻한 지역사회를 만들기 위해 정진하고 있습니다. 우리 부산지부는 지역사회의 등불이 되어 온 삼광사와 긴밀히 연계하여, 전문적인 복지 서비스를 제공하고 나눔 문화를 확산하는 데 앞장서고 있습니다.
+              </p>
+            </div>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <a href="#projects" className="inline-flex justify-center items-center px-8 py-4 text-base font-semibold rounded-full text-white bg-gray-900 hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl">
                 사업 둘러보기
