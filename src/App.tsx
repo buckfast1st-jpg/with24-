@@ -68,8 +68,15 @@ function AppContent() {
       try {
         const response = await fetch('/api/config', { signal: controller.signal });
         if (response.ok) {
-          const data = await response.json();
-          setSiteData(data);
+          const text = await response.text();
+          if (text) {
+            try {
+              const data = JSON.parse(text);
+              setSiteData(data);
+            } catch (e) {
+              console.error('Failed to parse config JSON:', e);
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch config:', error);
@@ -100,9 +107,15 @@ function AppContent() {
       if (response.ok) {
         setSiteData(newConfig);
         setShowAdminModal(false);
+        alert('성공적으로 저장되었습니다.');
       } else {
-        const errorData = await response.json();
-        alert(`설정 저장에 실패했습니다: ${errorData.error || '알 수 없는 오류'}`);
+        const text = await response.text();
+        let errorMessage = text;
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || text;
+        } catch (e) {}
+        alert(`설정 저장에 실패했습니다 (${response.status}): ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('Error saving config:', error);

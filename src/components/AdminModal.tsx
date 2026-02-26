@@ -28,7 +28,9 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const text = await response.text();
+        if (!text) throw new Error('Empty response from server');
+        const data = JSON.parse(text);
         const url = data.url;
 
         if (target === 'logo') {
@@ -41,8 +43,13 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
           setEditConfig({ ...editConfig, galleryPhotos: newGallery });
         }
       } else {
-        const errorData = await response.json();
-        alert(`업로드에 실패했습니다: ${errorData.error || '알 수 없는 오류'}`);
+        const text = await response.text();
+        let errorMessage = text;
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || text;
+        } catch (e) {}
+        alert(`업로드에 실패했습니다 (${response.status}): ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -67,14 +74,21 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const text = await response.text();
+        if (!text) throw new Error('Empty response from server');
+        const data = JSON.parse(text);
         updateNotice(noticeId, 'attachment', {
           name: file.name,
           url: data.url
         });
       } else {
-        const errorData = await response.json();
-        alert(`업로드에 실패했습니다: ${errorData.error || '알 수 없는 오류'}`);
+        const text = await response.text();
+        let errorMessage = text;
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || text;
+        } catch (e) {}
+        alert(`업로드에 실패했습니다 (${response.status}): ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('Upload error:', error);
