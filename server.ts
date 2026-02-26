@@ -112,6 +112,11 @@ app.get('/api/files/:id', (req, res) => {
   }
 });
 
+// Catch-all for API routes that aren't matched
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
+});
+
 // Vite middleware for development
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';
