@@ -16,15 +16,26 @@ app.get('/test', (req, res) => {
 
 app.use(express.json({ limit: '50mb' }));
 
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Google Auth Setup
 let sheets: any = null;
 let drive: any = null;
 
 try {
+  let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  if (privateKey && privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    privateKey = privateKey.substring(1, privateKey.length - 1);
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      private_key: privateKey?.replace(/\\n/g, '\n'),
     },
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
@@ -34,6 +45,7 @@ try {
 
   sheets = google.sheets({ version: 'v4', auth });
   drive = google.drive({ version: 'v3', auth });
+  console.log('Google APIs initialized successfully');
 } catch (error) {
   console.error('Failed to initialize Google Auth:', error);
 }
@@ -142,6 +154,15 @@ app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
     console.error('Error uploading to Drive:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Error handling middleware
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
 // Vite middleware for development
