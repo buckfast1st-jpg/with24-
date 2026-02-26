@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { X, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Trash2, Upload, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
 
 export default function AdminModal({ config, onSave, onClose, onReset }: any) {
   const [editConfig, setEditConfig] = useState(config);
   const [activeTab, setActiveTab] = useState('info');
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleInfoChange = (field: string, value: string) => {
     setEditConfig({
@@ -12,24 +13,73 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
     });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'logo' | 'gallery' | 'supportProject', index?: number) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'logo' | 'gallery' | 'supportProject', index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      if (target === 'logo') {
-        setEditConfig({ ...editConfig, logoUrl: base64String });
-      } else if (target === 'supportProject') {
-        setEditConfig({ ...editConfig, supportProjectImage: base64String });
-      } else if (target === 'gallery' && typeof index === 'number') {
-        const newGallery = [...editConfig.galleryPhotos];
-        newGallery[index].url = base64String;
-        setEditConfig({ ...editConfig, galleryPhotos: newGallery });
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const url = data.url;
+
+        if (target === 'logo') {
+          setEditConfig({ ...editConfig, logoUrl: url });
+        } else if (target === 'supportProject') {
+          setEditConfig({ ...editConfig, supportProjectImage: url });
+        } else if (target === 'gallery' && typeof index === 'number') {
+          const newGallery = [...editConfig.galleryPhotos];
+          newGallery[index].url = url;
+          setEditConfig({ ...editConfig, galleryPhotos: newGallery });
+        }
+      } else {
+        alert('업로드에 실패했습니다.');
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, noticeId: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        updateNotice(noticeId, 'attachment', {
+          name: file.name,
+          url: data.url
+        });
+      } else {
+        alert('업로드에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const addGalleryPhoto = () => {
@@ -48,6 +98,34 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
     const newGallery = [...editConfig.galleryPhotos];
     newGallery[index].title = title;
     setEditConfig({ ...editConfig, galleryPhotos: newGallery });
+  };
+
+  const addNotice = () => {
+    const newNotice = {
+      id: Date.now(),
+      title: '새로운 공지사항',
+      date: new Date().toISOString().split('T')[0],
+      content: '내용을 입력하세요.',
+      important: false
+    };
+    setEditConfig({
+      ...editConfig,
+      notices: [newNotice, ...editConfig.notices]
+    });
+  };
+
+  const removeNotice = (id: number) => {
+    setEditConfig({
+      ...editConfig,
+      notices: editConfig.notices.filter((n: any) => n.id !== id)
+    });
+  };
+
+  const updateNotice = (id: number, field: string, value: any) => {
+    setEditConfig({
+      ...editConfig,
+      notices: editConfig.notices.map((n: any) => n.id === id ? { ...n, [field]: value } : n)
+    });
   };
 
   return (
@@ -72,6 +150,12 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
             onClick={() => setActiveTab('gallery')}
           >
             갤러리 관리
+          </button>
+          <button 
+            className={`flex-1 py-4 font-semibold ${activeTab === 'notices' ? 'text-green-600 border-b-2 border-green-600 bg-white' : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
+            onClick={() => setActiveTab('notices')}
+          >
+            공지사항 관리
           </button>
         </div>
 
@@ -181,12 +265,108 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
               </div>
             </div>
           )}
+
+          {activeTab === 'notices' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900">공지사항 목록 ({editConfig.notices.length}개)</h3>
+                <button onClick={addNotice} className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-200 transition-colors">
+                  <Plus className="w-4 h-4" /> 공지 추가
+                </button>
+              </div>
+              <div className="space-y-4">
+                {editConfig.notices.map((notice: any) => (
+                  <div key={notice.id} className="bg-gray-50 border border-gray-200 rounded-xl p-6 space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">제목</label>
+                        <input 
+                          type="text" 
+                          value={notice.title} 
+                          onChange={(e) => updateNotice(notice.id, 'title', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        />
+                      </div>
+                      <div className="w-full md:w-40">
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">날짜</label>
+                        <input 
+                          type="date" 
+                          value={notice.date} 
+                          onChange={(e) => updateNotice(notice.id, 'date', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        />
+                      </div>
+                      <div className="flex items-end pb-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={notice.important} 
+                            onChange={(e) => updateNotice(notice.id, 'important', e.target.checked)}
+                            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          />
+                          <span className="text-sm font-medium text-gray-700">중요공지</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">내용</label>
+                      <textarea 
+                        value={notice.content} 
+                        onChange={(e) => updateNotice(notice.id, 'content', e.target.value)}
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none"
+                      />
+                    </div>
+                    <div className="pt-2 border-t border-gray-100">
+                      <label className="block text-xs font-semibold text-gray-500 mb-2">첨부파일</label>
+                      {notice.attachment ? (
+                        <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <FileText className="w-4 h-4 text-blue-500" />
+                            <span className="truncate max-w-[200px]">{notice.attachment.name}</span>
+                          </div>
+                          <button 
+                            onClick={() => updateNotice(notice.id, 'attachment', null)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-2 px-4 py-2 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 cursor-pointer hover:bg-gray-50 transition-colors">
+                          <Upload className="w-4 h-4" />
+                          파일 선택
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            onChange={(e) => handleFileUpload(e, notice.id)} 
+                          />
+                        </label>
+                      )}
+                    </div>
+                    <div className="flex justify-end">
+                      <button onClick={() => removeNotice(notice.id)} className="text-red-500 text-sm font-medium flex items-center gap-1 hover:text-red-700 transition-colors">
+                        <Trash2 className="w-4 h-4" /> 삭제하기
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
-          <button onClick={onReset} className="px-4 py-2.5 rounded-xl font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
-            기본값으로 초기화
-          </button>
+          <div className="flex items-center gap-4">
+            <button onClick={onReset} className="px-4 py-2.5 rounded-xl font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+              기본값으로 초기화
+            </button>
+            {isUploading && (
+              <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+                <Loader2 className="w-4 h-4 animate-spin" /> 파일 업로드 중...
+              </div>
+            )}
+          </div>
           <div className="flex gap-3">
             <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition-colors">
               취소
