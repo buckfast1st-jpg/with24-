@@ -1,20 +1,34 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { google } from 'googleapis';
 import multer from 'multer';
-import { Readable } from 'stream';
+import path from 'path';
+import fs from 'fs';
+import Database from 'better-sqlite3';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+const db = new Database('data.db');
 
-app.get('/test', (req, res) => {
-  res.send('Server is running');
-});
+// Initialize Database
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY,
+    config TEXT
+  );
+  CREATE TABLE IF NOT EXISTS uploads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT,
+    original_name TEXT,
+    mimetype TEXT,
+    data BLOB
+  );
+`);
 
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -22,147 +36,75 @@ app.use((req, res, next) => {
   next();
 });
 
-// Google Auth Setup
-let sheets: any = null;
-let drive: any = null;
-
-try {
-  let privateKey = process.env.GOOGLE_PRIVATE_KEY;
-  if (privateKey && privateKey.startsWith('"') && privateKey.endsWith('"')) {
-    privateKey = privateKey.substring(1, privateKey.length - 1);
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: privateKey?.replace(/\\n/g, '\n'),
-    },
-    scopes: [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive.file',
-    ],
-  });
-
-  sheets = google.sheets({ version: 'v4', auth });
-  drive = google.drive({ version: 'v3', auth });
-  console.log('Google APIs initialized successfully');
-} catch (error) {
-  console.error('Failed to initialize Google Auth:', error);
-}
-
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
-
 // Multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', googleAuth: !!sheets });
+  res.json({ status: 'ok', db: 'sqlite' });
 });
 
-app.get('/api/config', async (req: any, res: any) => {
-  if (!sheets || !SPREADSHEET_ID) {
-    return res.status(503).json({ error: 'Google API not configured' });
-  }
+app.get('/api/config', (req, res) => {
   try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A1',
-    });
-    
-    if (response.data.values && response.data.values[0]) {
-      res.json(JSON.parse(response.data.values[0][0]));
+    const row = db.prepare('SELECT config FROM settings WHERE id = 1').get() as any;
+    if (row) {
+      res.json(JSON.parse(row.config));
     } else {
       res.status(404).json({ error: 'Config not found' });
     }
   } catch (error: any) {
-    console.error('Error fetching config:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/config', async (req: any, res: any) => {
-  if (!sheets || !SPREADSHEET_ID) {
-    return res.status(503).json({ error: 'Google Sheets API not configured' });
-  }
+app.post('/api/config', (req, res) => {
   try {
-    const config = req.body;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A1',
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [[JSON.stringify(config)]],
-      },
-    });
+    const config = JSON.stringify(req.body);
+    const exists = db.prepare('SELECT id FROM settings WHERE id = 1').get();
+    if (exists) {
+      db.prepare('UPDATE settings SET config = ? WHERE id = 1').run(config);
+    } else {
+      db.prepare('INSERT INTO settings (id, config) VALUES (1, ?)').run(config);
+    }
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error saving config:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
-  if (!drive) {
-    return res.status(503).json({ error: 'Google Drive API not configured' });
-  }
+app.post('/api/upload', upload.single('file'), (req: any, res: any) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const bufferStream = new Readable();
-    bufferStream.push(req.file.buffer);
-    bufferStream.push(null);
+    const info = db.prepare('INSERT INTO uploads (filename, original_name, mimetype, data) VALUES (?, ?, ?, ?)').run(
+      `${Date.now()}-${req.file.originalname}`,
+      req.file.originalname,
+      req.file.mimetype,
+      req.file.buffer
+    );
 
-    const fileMetadata: any = {
-      name: `${Date.now()}-${req.file.originalname}`,
-    };
-    
-    if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
-      fileMetadata.parents = [process.env.GOOGLE_DRIVE_FOLDER_ID];
-    }
-
-    const media = {
-      mimeType: req.file.mimetype,
-      body: bufferStream,
-    };
-
-    const file = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id, webViewLink',
-    });
-
-    // Make file public
-    try {
-      await drive.permissions.create({
-        fileId: file.data.id!,
-        requestBody: {
-          role: 'reader',
-          type: 'anyone',
-        },
-      });
-    } catch (permError) {
-      console.warn('Could not set public permissions, file might not be viewable by everyone:', permError);
-    }
-
-    // Construct direct view link
-    const directLink = `https://drive.google.com/uc?export=view&id=${file.data.id}`;
-    res.json({ url: directLink, id: file.data.id });
+    const fileId = info.lastInsertRowid;
+    const url = `/api/files/${fileId}`;
+    res.json({ url, id: fileId });
   } catch (error: any) {
-    console.error('Error uploading to Drive:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Error handling middleware
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Unhandled error:', err);
-  if (res.headersSent) {
-    return next(err);
+app.get('/api/files/:id', (req, res) => {
+  try {
+    const row = db.prepare('SELECT data, mimetype FROM uploads WHERE id = ?').get(req.params.id) as any;
+    if (row) {
+      res.set('Content-Type', row.mimetype);
+      res.send(row.data);
+    } else {
+      res.status(404).send('File not found');
+    }
+  } catch (error: any) {
+    res.status(500).send(error.message);
   }
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
 // Vite middleware for development
