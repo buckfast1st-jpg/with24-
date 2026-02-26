@@ -24,21 +24,48 @@ let sheets: any = null;
 let drive: any = null;
 let authError: string | null = null;
 
-try {
-  let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+function formatPrivateKey(key: string) {
+  if (!key) return '';
   
-  // 1. Remove surrounding quotes if they exist
-  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-    privateKey = privateKey.substring(1, privateKey.length - 1);
-  }
-  
-  // 2. Replace escaped newlines with actual newlines
-  privateKey = privateKey.replace(/\\n/g, '\n');
+  let formatted = key.trim();
 
-  // 3. Ensure the key has the correct header and footer if it somehow got stripped
-  if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-    privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----\n`;
+  // 1. If user pasted the entire JSON file content
+  try {
+    const parsed = JSON.parse(formatted);
+    if (parsed && typeof parsed === 'object' && parsed.private_key) {
+      formatted = parsed.private_key;
+    }
+  } catch (e) {}
+
+  // 2. Remove surrounding quotes if pasted literally
+  formatted = formatted.replace(/^["']|["']$/g, '');
+  
+  // 3. Replace literal \n with actual newlines
+  formatted = formatted.replace(/\\n/g, '\n');
+  
+  // 4. Rebuild the PEM format perfectly from scratch
+  const header = '-----BEGIN PRIVATE KEY-----';
+  const footer = '-----END PRIVATE KEY-----';
+  
+  let body = formatted;
+  if (formatted.includes(header) && formatted.includes(footer)) {
+    body = formatted.substring(
+      formatted.indexOf(header) + header.length,
+      formatted.indexOf(footer)
+    );
   }
+  
+  // Remove ALL whitespace (spaces, newlines, tabs) to get pure base64
+  body = body.replace(/\s+/g, '');
+  
+  // Split into exactly 64-character lines as required by OpenSSL
+  const lines = body.match(/.{1,64}/g) || [];
+  
+  return `${header}\n${lines.join('\n')}\n${footer}\n`;
+}
+
+try {
+  const privateKey = formatPrivateKey(process.env.GOOGLE_PRIVATE_KEY || '');
 
   const auth = new google.auth.GoogleAuth({
     credentials: {
