@@ -56,6 +56,14 @@ export default function App() {
     setShowAdminModal(false);
   };
 
+  const handleResetConfig = () => {
+    if (window.confirm('모든 설정을 기본값으로 초기화하시겠습니까? (저장되지 않은 변경사항은 사라집니다)')) {
+      setSiteData(defaultConfig);
+      localStorage.removeItem('siteConfig');
+      setShowAdminModal(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>, formName: string) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -544,7 +552,7 @@ export default function App() {
 
       {/* Modals */}
       {showLoginModal && <LoginModal onLogin={handleAdminLogin} onClose={() => setShowLoginModal(false)} />}
-      {showAdminModal && <AdminModal config={siteData} onSave={handleSaveConfig} onClose={() => setShowAdminModal(false)} />}
+      {showAdminModal && <AdminModal config={siteData} onSave={handleSaveConfig} onClose={() => setShowAdminModal(false)} onReset={handleResetConfig} />}
     </div>
   );
 }

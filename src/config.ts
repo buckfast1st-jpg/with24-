@@ -1,5 +1,5 @@
 export const defaultConfig = {
-  logoUrl: "https://drive.google.com/uc?export=view&id=0B8PILBr0jXq2bW5ROS1UQTdRb0U&resourcekey=0-VTKSFfOfFqes8TUoVOZVXw",
+  logoUrl: "https://drive.google.com/uc?export=view&id=17G_i_YOBZ3nYk-DZsA4nqvXRGoAU7yDV",
   supportProjectImage: "https://images.unsplash.com/photo-1593113514676-5f8004f1f256?auto=format&fit=crop&q=80&w=1000",
   companyInfo: {
     name: "대한불교천태종복지재단 부산지부",

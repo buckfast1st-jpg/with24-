@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 
-export default function AdminModal({ config, onSave, onClose }: any) {
+export default function AdminModal({ config, onSave, onClose, onReset }: any) {
   const [editConfig, setEditConfig] = useState(config);
   const [activeTab, setActiveTab] = useState('info');
 
@@ -183,13 +183,18 @@ export default function AdminModal({ config, onSave, onClose }: any) {
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 shrink-0">
-          <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition-colors">
-            취소
+        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
+          <button onClick={onReset} className="px-4 py-2.5 rounded-xl font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+            기본값으로 초기화
           </button>
-          <button onClick={() => onSave(editConfig)} className="px-6 py-2.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md">
-            저장하기
-          </button>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition-colors">
+              취소
+            </button>
+            <button onClick={() => onSave(editConfig)} className="px-6 py-2.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md">
+              저장하기
+            </button>
+          </div>
         </div>
       </div>
     </div>
