@@ -3,29 +3,25 @@ import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import Database from 'better-sqlite3';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
-const db = new Database('data.db');
+const DATA_FILE = 'data.json';
+const UPLOADS_DIR = 'uploads_data';
 
-// Initialize Database
-db.exec(`
-  CREATE TABLE IF NOT EXISTS settings (
-    id INTEGER PRIMARY KEY,
-    config TEXT
-  );
-  CREATE TABLE IF NOT EXISTS uploads (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT,
-    original_name TEXT,
-    mimetype TEXT,
-    data BLOB
-  );
-`);
+// Ensure data file and uploads dir exist
+if (!fs.existsSync(DATA_FILE)) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify({ settings: null, uploads: [] }));
+}
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR);
+}
+
+const getData = () => JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+const saveData = (data: any) => fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -41,14 +37,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', db: 'sqlite' });
+  res.json({ status: 'ok', storage: 'json' });
 });
 
 app.get('/api/config', (req, res) => {
   try {
-    const row = db.prepare('SELECT config FROM settings WHERE id = 1').get() as any;
-    if (row) {
-      res.json(JSON.parse(row.config));
+    const data = getData();
+    if (data.settings) {
+      res.json(data.settings);
     } else {
       res.status(404).json({ error: 'Config not found' });
     }
@@ -59,13 +55,9 @@ app.get('/api/config', (req, res) => {
 
 app.post('/api/config', (req, res) => {
   try {
-    const config = JSON.stringify(req.body);
-    const exists = db.prepare('SELECT id FROM settings WHERE id = 1').get();
-    if (exists) {
-      db.prepare('UPDATE settings SET config = ? WHERE id = 1').run(config);
-    } else {
-      db.prepare('INSERT INTO settings (id, config) VALUES (1, ?)').run(config);
-    }
+    const data = getData();
+    data.settings = req.body;
+    saveData(data);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -78,14 +70,21 @@ app.post('/api/upload', upload.single('file'), (req: any, res: any) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const info = db.prepare('INSERT INTO uploads (filename, original_name, mimetype, data) VALUES (?, ?, ?, ?)').run(
-      `${Date.now()}-${req.file.originalname}`,
-      req.file.originalname,
-      req.file.mimetype,
-      req.file.buffer
-    );
+    const fileId = Date.now().toString();
+    const filename = `${fileId}-${req.file.originalname}`;
+    const filePath = path.join(UPLOADS_DIR, filename);
+    
+    fs.writeFileSync(filePath, req.file.buffer);
 
-    const fileId = info.lastInsertRowid;
+    const data = getData();
+    data.uploads.push({
+      id: fileId,
+      filename,
+      original_name: req.file.originalname,
+      mimetype: req.file.mimetype
+    });
+    saveData(data);
+
     const url = `/api/files/${fileId}`;
     res.json({ url, id: fileId });
   } catch (error: any) {
@@ -95,12 +94,18 @@ app.post('/api/upload', upload.single('file'), (req: any, res: any) => {
 
 app.get('/api/files/:id', (req, res) => {
   try {
-    const row = db.prepare('SELECT data, mimetype FROM uploads WHERE id = ?').get(req.params.id) as any;
-    if (row) {
-      res.set('Content-Type', row.mimetype);
-      res.send(row.data);
+    const data = getData();
+    const upload = data.uploads.find((u: any) => u.id === req.params.id);
+    if (upload) {
+      const filePath = path.join(UPLOADS_DIR, upload.filename);
+      if (fs.existsSync(filePath)) {
+        res.set('Content-Type', upload.mimetype);
+        res.send(fs.readFileSync(filePath));
+      } else {
+        res.status(404).send('File not found on disk');
+      }
     } else {
-      res.status(404).send('File not found');
+      res.status(404).send('File record not found');
     }
   } catch (error: any) {
     res.status(500).send(error.message);
