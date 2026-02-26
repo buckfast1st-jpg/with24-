@@ -12,7 +12,7 @@ export default function AdminModal({ config, onSave, onClose }: any) {
     });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'logo' | 'gallery', index?: number) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'logo' | 'gallery' | 'supportProject', index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -21,6 +21,8 @@ export default function AdminModal({ config, onSave, onClose }: any) {
       const base64String = reader.result as string;
       if (target === 'logo') {
         setEditConfig({ ...editConfig, logoUrl: base64String });
+      } else if (target === 'supportProject') {
+        setEditConfig({ ...editConfig, supportProjectImage: base64String });
       } else if (target === 'gallery' && typeof index === 'number') {
         const newGallery = [...editConfig.galleryPhotos];
         newGallery[index].url = base64String;
@@ -88,6 +90,24 @@ export default function AdminModal({ config, onSave, onClose }: any) {
                       type="file" 
                       accept="image/*"
                       onChange={(e) => handleImageUpload(e, 'logo')}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-all cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-gray-100">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><ImageIcon className="w-5 h-5"/> 외부 지원 사업 이미지</h3>
+                <div className="flex flex-col sm:flex-row items-center gap-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
+                  <div className="w-48 h-32 bg-white rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden p-2 shrink-0">
+                    <img src={editConfig.supportProjectImage} alt="Support Project Preview" className="w-full h-full object-cover rounded" />
+                  </div>
+                  <div className="flex-1 w-full">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">이미지 업로드 (권장: 가로형 고화질)</label>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, 'supportProject')}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-all cursor-pointer"
                     />
                   </div>
