@@ -41,11 +41,12 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
           setEditConfig({ ...editConfig, galleryPhotos: newGallery });
         }
       } else {
-        alert('업로드에 실패했습니다.');
+        const errorData = await response.json();
+        alert(`업로드에 실패했습니다: ${errorData.error || '알 수 없는 오류'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      alert('오류가 발생했습니다.');
+      alert(`오류가 발생했습니다: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
@@ -72,11 +73,12 @@ export default function AdminModal({ config, onSave, onClose, onReset }: any) {
           url: data.url
         });
       } else {
-        alert('업로드에 실패했습니다.');
+        const errorData = await response.json();
+        alert(`업로드에 실패했습니다: ${errorData.error || '알 수 없는 오류'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      alert('오류가 발생했습니다.');
+      alert(`오류가 발생했습니다: ${error.message}`);
     } finally {
       setIsUploading(false);
     }

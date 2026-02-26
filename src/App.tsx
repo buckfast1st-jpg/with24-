@@ -101,11 +101,12 @@ function AppContent() {
         setSiteData(newConfig);
         setShowAdminModal(false);
       } else {
-        alert('설정 저장에 실패했습니다.');
+        const errorData = await response.json();
+        alert(`설정 저장에 실패했습니다: ${errorData.error || '알 수 없는 오류'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving config:', error);
-      alert('오류가 발생했습니다.');
+      alert(`오류가 발생했습니다: ${error.message}`);
     }
   };
 

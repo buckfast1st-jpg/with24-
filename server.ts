@@ -70,6 +70,9 @@ app.get('/api/config', async (req: any, res: any) => {
 });
 
 app.post('/api/config', async (req: any, res: any) => {
+  if (!sheets || !SPREADSHEET_ID) {
+    return res.status(503).json({ error: 'Google Sheets API not configured' });
+  }
   try {
     const config = req.body;
     await sheets.spreadsheets.values.update({
@@ -88,6 +91,9 @@ app.post('/api/config', async (req: any, res: any) => {
 });
 
 app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
+  if (!drive) {
+    return res.status(503).json({ error: 'Google Drive API not configured' });
+  }
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -97,10 +103,13 @@ app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
     bufferStream.push(req.file.buffer);
     bufferStream.push(null);
 
-    const fileMetadata = {
+    const fileMetadata: any = {
       name: `${Date.now()}-${req.file.originalname}`,
-      parents: [], 
     };
+    
+    if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
+      fileMetadata.parents = [process.env.GOOGLE_DRIVE_FOLDER_ID];
+    }
 
     const media = {
       mimeType: req.file.mimetype,
@@ -114,13 +123,17 @@ app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
     });
 
     // Make file public
-    await drive.permissions.create({
-      fileId: file.data.id!,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
+    try {
+      await drive.permissions.create({
+        fileId: file.data.id!,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
+    } catch (permError) {
+      console.warn('Could not set public permissions, file might not be viewable by everyone:', permError);
+    }
 
     // Construct direct view link
     const directLink = `https://drive.google.com/uc?export=view&id=${file.data.id}`;
