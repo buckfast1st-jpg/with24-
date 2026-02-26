@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Heart, Users, Leaf, Calendar, Utensils, ArrowRight, Phone, Mail, MapPin, Printer } from 'lucide-react';
+import { Menu, X, Heart, Users, Leaf, Calendar, Utensils, ArrowRight, Phone, Mail, MapPin, Printer, Settings, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
-import { siteConfig } from './config';
+import { defaultConfig } from './config';
+import LoginModal from './components/LoginModal';
+import AdminModal from './components/AdminModal';
 
-const Logo = () => (
+const Logo = ({ url, name }: { url: string, name: string }) => (
   <div className="flex items-center gap-3">
     <img 
-      src={siteConfig.logoUrl} 
-      alt="대한불교천태종복지재단 로고" 
+      src={url} 
+      alt="로고" 
       className="h-12 w-auto object-contain" 
       referrerPolicy="no-referrer"
     />
     <span className="font-bold text-lg tracking-tight text-gray-900 hidden sm:block leading-tight">
-      대한불교천태종복지재단<br/><span className="text-sm text-green-600">부산지부</span>
+      {name.split(' ').map((part, i) => (
+        <React.Fragment key={i}>
+          {i === 0 ? part : <span className="text-sm text-green-600">{part}</span>}
+          {i === 0 && <br/>}
+        </React.Fragment>
+      ))}
     </span>
   </div>
 );
@@ -22,6 +29,32 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState('donate');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Admin States
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  
+  // Site Data State (loads from localStorage or defaultConfig)
+  const [siteData, setSiteData] = useState(() => {
+    const saved = localStorage.getItem('siteConfig');
+    return saved ? JSON.parse(saved) : defaultConfig;
+  });
+
+  const handleAdminLogin = (password: string) => {
+    if (password === 'admin' || password === 'admin123') {
+      setIsAdmin(true);
+      setShowLoginModal(false);
+    } else {
+      alert('비밀번호가 일치하지 않습니다.');
+    }
+  };
+
+  const handleSaveConfig = (newConfig: any) => {
+    setSiteData(newConfig);
+    localStorage.setItem('siteConfig', JSON.stringify(newConfig));
+    setShowAdminModal(false);
+  };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>, formName: string) => {
     e.preventDefault();
@@ -100,10 +133,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 selection:bg-green-200">
       {/* Navigation */}
-      <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
+      <nav className={`fixed w-full z-40 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
-            <Logo />
+            <Logo url={siteData.logoUrl} name={siteData.companyInfo.name} />
             
             <div className="hidden md:flex items-center space-x-8">
               <a href="#about" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">재단소개</a>
@@ -114,6 +147,24 @@ export default function App() {
               <button className="bg-green-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-green-700 transition-all shadow-sm hover:shadow-md">
                 후원하기
               </button>
+              
+              {/* Admin Controls */}
+              <div className="pl-4 border-l border-gray-200 flex items-center gap-3">
+                {isAdmin ? (
+                  <>
+                    <button onClick={() => setShowAdminModal(true)} className="flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                      <Settings className="w-4 h-4" /> 관리자
+                    </button>
+                    <button onClick={() => setIsAdmin(false)} className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                      <LogOut className="w-4 h-4" /> 로그아웃
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => setShowLoginModal(true)} className="text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors">
+                    Admin
+                  </button>
+                )}
+              </div>
             </div>
 
             <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -135,6 +186,22 @@ export default function App() {
             <button className="bg-green-600 text-white p-4 rounded-xl text-lg font-semibold mt-4">
               후원하기
             </button>
+            <div className="pt-4 flex justify-center">
+              {isAdmin ? (
+                <div className="flex gap-4">
+                  <button onClick={() => { setShowAdminModal(true); setMobileMenuOpen(false); }} className="flex items-center gap-1 text-sm font-bold text-blue-600">
+                    <Settings className="w-4 h-4" /> 관리자 설정
+                  </button>
+                  <button onClick={() => { setIsAdmin(false); setMobileMenuOpen(false); }} className="flex items-center gap-1 text-sm font-medium text-gray-500">
+                    <LogOut className="w-4 h-4" /> 로그아웃
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => { setShowLoginModal(true); setMobileMenuOpen(false); }} className="text-sm font-medium text-gray-400">
+                  Admin Login
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -238,8 +305,8 @@ export default function App() {
             <div className="lg:w-1/2 bg-gray-200 relative min-h-[400px]">
               <div className="absolute inset-0 bg-gradient-to-br from-orange-300 to-red-400 mix-blend-multiply opacity-20 z-10"></div>
               <img 
-                src={siteConfig.supportProjectImage} 
-                alt="사랑의 밥차 (임시)" 
+                src={siteData.supportProjectImage} 
+                alt="사랑의 밥차" 
                 className="w-full h-full object-cover absolute inset-0"
               />
             </div>
@@ -255,7 +322,7 @@ export default function App() {
             <p className="text-lg text-gray-600">이웃과 함께 나누며 만들어간 따뜻한 활동의 순간들입니다.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {siteConfig.galleryPhotos.map((photo, index) => (
+            {siteData.galleryPhotos.map((photo: any, index: number) => (
               <motion.div 
                 key={index}
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -421,13 +488,18 @@ export default function App() {
             <div className="lg:col-span-2">
               <div className="flex items-center gap-3 mb-6 bg-white p-3 rounded-2xl inline-flex">
                 <img 
-                  src={siteConfig.logoUrl} 
+                  src={siteData.logoUrl} 
                   alt="Logo" 
                   className="h-10 w-auto object-contain"
                   referrerPolicy="no-referrer"
                 />
                 <span className="font-bold text-lg tracking-tight text-gray-900 pr-2 leading-tight">
-                  대한불교천태종복지재단<br/><span className="text-sm text-green-600">부산지부</span>
+                  {siteData.companyInfo.name.split(' ').map((part: string, i: number) => (
+                    <React.Fragment key={i}>
+                      {i === 0 ? part : <span className="text-sm text-green-600">{part}</span>}
+                      {i === 0 && <br/>}
+                    </React.Fragment>
+                  ))}
                 </span>
               </div>
               <p className="text-gray-400 leading-relaxed max-w-md">
@@ -440,19 +512,19 @@ export default function App() {
               <ul className="space-y-4 text-gray-400">
                 <li className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
-                  <span>부산광역시 부산진구 초읍천로43번길 77</span>
+                  <span>{siteData.companyInfo.address}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone className="w-5 h-5 text-gray-500 shrink-0" />
-                  <span>051-808-7111</span>
+                  <span>{siteData.companyInfo.phone}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Printer className="w-5 h-5 text-gray-500 shrink-0" />
-                  <span>051-803-1332</span>
+                  <span>{siteData.companyInfo.fax}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-gray-500 shrink-0" />
-                  <span>with99bs@with99.org</span>
+                  <span>{siteData.companyInfo.email}</span>
                 </li>
               </ul>
             </div>
@@ -460,7 +532,7 @@ export default function App() {
           
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} 대한불교천태종복지재단 부산지부. All rights reserved.
+              © {new Date().getFullYear()} {siteData.companyInfo.name}. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-gray-500">
               <a href="#" className="hover:text-white transition-colors">개인정보처리방침</a>
@@ -469,6 +541,10 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Modals */}
+      {showLoginModal && <LoginModal onLogin={handleAdminLogin} onClose={() => setShowLoginModal(false)} />}
+      {showAdminModal && <AdminModal config={siteData} onSave={handleSaveConfig} onClose={() => setShowAdminModal(false)} />}
     </div>
   );
 }
